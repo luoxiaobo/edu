@@ -32,6 +32,7 @@ router.get('/advert/add', (req, res, next) => {
   res.render('advert_add.html')
 })
 
+/*
 router.post('/advert/add', (req, res, next) => {
   // 1. 接收表单提交的数据
   // 同一个请求的 req 和 res 是同一个对象
@@ -70,6 +71,50 @@ router.post('/advert/add', (req, res, next) => {
   })
   
 })
+*/
+
+// 使用 promise 的形式来写
+router.post('/advert/add', (req, res, next) => {
+  pmFormidable(req)
+    .then((result) => {
+      const [fields, files] = result
+      const body = fields
+      body.image = basename(files.image.path)
+   
+      // 2. 操作数据库
+      const advert = new Advert({
+        title: body.title,
+        image: body.image,
+        link: body.link,
+        start_time: body.start_time,
+        end_time: body.end_time
+      })
+      return advert.save()
+    })
+    .then(result => {
+      res.json({
+        err_code: 0
+      })
+    })
+    .catch(err => {
+      next(err)
+    })
+
+    function pmFormidable(req) {
+      return new Promise((resolve, reject) => {
+        const form = formidable({ multiples: true })
+        form.uploadDir = config.uploadDir  // 配置 formidable 文件上传接收路径
+        form.keepExtensions = true // 配置保持文件原始的扩展名
+        form.parse(req, (err, fields, files) => {
+          if (err) {
+            reject(err)
+          }
+          resolve([fields, files])
+        })
+      })
+    }
+})
+
 
 router.get('/advert/list', (req, res, next) => {
   Advert.find((err, docs) => {
